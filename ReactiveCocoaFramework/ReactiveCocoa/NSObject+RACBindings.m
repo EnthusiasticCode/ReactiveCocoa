@@ -27,51 +27,51 @@ RACSignalTransformationBlock const RACSignalTransformationIdentity = ^(id<RACSig
 	RACSubject *receiverSubject = [RACSubject subject];
 	RACSubject *otherSubject = [RACSubject subject];
 	
-	__block volatile uint32_t receiverBarrier = 0;
-	__block volatile uint32_t otherBarrier = 0;
+	__block volatile int32_t receiverIgnoreFlag = 0;
+	__block volatile int32_t otherObjectIgnoreFlag = 0;
 	
 	if (receiverSignalBlock == NULL) receiverSignalBlock = RACSignalTransformationIdentity;
 	if (otherSignalBlock == NULL) otherSignalBlock = RACSignalTransformationIdentity;
 	
 	RACDisposable *receiverDisposable = [otherSignalBlock(receiverSubject) subscribeNext:^(id x) {
 		@strongify(otherObject);
-		[otherObject setValue:x forKey:receiverKeyPath];
-		OSAtomicAnd32(0, &otherBarrier);
+		[otherObject setValue:x forKey:otherKeyPath];
+		OSAtomicDecrement32(&otherObjectIgnoreFlag);
 	}];
 	
 	RACDisposable *otherDisposable = [receiverSignalBlock(otherSubject) subscribeNext:^(id x) {
 		@strongify(self);
-		[self setValue:x forKey:otherKeyPath];
-		OSAtomicAnd32(0, &receiverBarrier);
+		[self setValue:x forKey:receiverKeyPath];
+		OSAtomicDecrement32(&receiverIgnoreFlag);
 	}];
 	
 	id receiverObserver = [self rac_addObserver:otherObject forKeyPath:receiverKeyPath options:NSKeyValueObservingOptionPrior | NSKeyValueObservingOptionNew queue:[NSOperationQueue mainQueue] block:^(id observer, NSDictionary *change) {
-		if (receiverBarrier > 0) return;
+		if (receiverIgnoreFlag > 0) return;
 		
 		NSNumber *isPrior = change[NSKeyValueChangeNotificationIsPriorKey];
 		if (isPrior.boolValue) {
-			OSAtomicOr32(1, &otherBarrier);
+			OSAtomicIncrement32(&otherObjectIgnoreFlag);
 			return;
 		}
 		
 		id value = change[NSKeyValueChangeNewKey];
 		if (value) {
-			[receiverSubject sendNext:value];
+			[receiverSubject sendNext:(value == [NSNull null] ? nil : value)];
 		}
 	}];
 	
-	id otherObjectObserver = [otherObject rac_addObserver:self forKeyPath:otherKeyPath options:NSKeyValueObservingOptionPrior | NSKeyValueObservingOptionNew queue:[NSOperationQueue mainQueue] block:^(id observer, NSDictionary *change) {
-		if (otherBarrier > 0) return;
+	id otherObjectObserver = [otherObject rac_addObserver:self forKeyPath:otherKeyPath options:NSKeyValueObservingOptionPrior | NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial queue:[NSOperationQueue mainQueue] block:^(id observer, NSDictionary *change) {
+		if (otherObjectIgnoreFlag > 0) return;
 		
 		NSNumber *isPrior = change[NSKeyValueChangeNotificationIsPriorKey];
 		if (isPrior.boolValue) {
-			OSAtomicOr32(1, &receiverBarrier);
+			OSAtomicIncrement32(&receiverIgnoreFlag);
 			return;
 		}
 		
 		id value = change[NSKeyValueChangeNewKey];
 		if (value) {
-			[otherSubject sendNext:value];
+			[otherSubject sendNext:(value == [NSNull null] ? nil : value)];
 		}
 	}];
 	
