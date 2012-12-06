@@ -9,8 +9,14 @@
 #import <Foundation/Foundation.h>
 
 @class RACDisposable, RACScheduler;
+@protocol RACSignal;
+
+typedef id<RACSignal> (^RACSignalTransformationBlock)(id<RACSignal> signal);
 
 @interface NSObject (RACBindings)
+
+// Draft alternative implementation of below
+- (RACDisposable *)rac_bind:(NSString *)receiverKeyPath signalBlock:(RACSignalTransformationBlock)receiverSignalBlock toObject:(id)otherObject withKeyPath:(NSString *)otherKeyPath signalBlock:(RACSignalTransformationBlock)otherSignalBlock;
 
 // Create a two-way binding between `receiverKeyPath` on the receiver and
 // `otherKeyPath` on `otherObject`.

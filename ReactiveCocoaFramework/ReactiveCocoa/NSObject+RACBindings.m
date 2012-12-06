@@ -13,7 +13,100 @@
 #import "RACDisposable.h"
 #import "RACScheduler.h"
 
+@interface RACBindingVersion : NSObject
+@property (nonatomic) uint32_t receiverVersion;
+@property (nonatomic) uint32_t otherObjectVersion;
+@property (nonatomic) uint32_t receiverExpectedBounces;
+@property (nonatomic) uint32_t otherObjectExpectedBounces;
+
+- (BOOL)checkReceiverForSendAndUpdate;
+- (BOOL)checkOtherObjectForSendAndUpdate;
+- (void)receiverReceivedUpdate;
+- (void)otherObjectReceivedUpdate;
+@end
+
+@implementation RACBindingVersion
+- (BOOL)checkReceiverForSendAndUpdate {
+	BOOL shouldSend = self.receiverVersion >= self.otherObjectVersion;
+	if (shouldSend) {
+		self.receiverVersion += 1;
+	}
+	if (self.receiverExpectedBounces > 0) {
+		self.receiverVersion += 1;
+		self.receiverExpectedBounces -= 1;
+	}
+	return shouldSend;
+}
+
+- (BOOL)checkOtherObjectForSendAndUpdate {
+	BOOL shouldSend = self.otherObjectVersion >= self.receiverVersion;
+	if (shouldSend) {
+		self.otherObjectVersion += 1;
+	}
+	if (self.otherObjectExpectedBounces > 0) {
+		self.otherObjectVersion += 1;
+		self.otherObjectExpectedBounces -= 1;
+	}
+	return shouldSend;
+}
+
+- (void)receiverReceivedUpdate {
+	self.receiverExpectedBounces += 1;
+}
+
+- (void)otherObjectReceivedUpdate {
+	self.otherObjectExpectedBounces += 1;
+}
+@end
+
 @implementation NSObject (RACBindings)
+
+- (RACDisposable *)rac_bind:(NSString *)receiverKeyPath signalBlock:(RACSignalTransformationBlock)receiverSignalBlock toObject:(id)otherObject withKeyPath:(NSString *)otherKeyPath signalBlock:(RACSignalTransformationBlock)otherSignalBlock {
+	
+	// TODO: This implementation is a draft, requires polishing, retain cycle fixing and more
+	
+	RACSubject *receiverSubject = [RACSubject subject];
+	RACSubject *otherObjectSubject = [RACSubject subject];
+	
+	RACBindingVersion *version = [[RACBindingVersion alloc] init];
+	
+	RACDisposable *otherObjectDisposable = [(otherSignalBlock ? otherSignalBlock(receiverSubject) : receiverSubject) subscribeNext:^(id x) {
+		@synchronized (version) {
+			[version otherObjectReceivedUpdate];
+			[otherObject setValue:x forKey:otherKeyPath];
+		}
+	}];
+	
+	id receiverObserverIdentifier = [self rac_addObserver:otherObject forKeyPath:receiverKeyPath options:0 queue:nil block:^(id observer, NSDictionary *change) {
+		@synchronized (version) {
+			if (version.checkReceiverForSendAndUpdate) {
+				[receiverSubject sendNext:[self valueForKey:receiverKeyPath]];
+			}
+		}
+	}];
+	
+	RACDisposable *receiverDisposable = [(receiverSignalBlock ? receiverSignalBlock(otherObjectSubject) : otherObjectSubject) subscribeNext:^(id x) {
+		@synchronized (version) {
+			[version receiverReceivedUpdate];
+			[self setValue:x forKey:receiverKeyPath];
+		}
+	}];
+	
+	id otherObjectObserverIdentifier = [otherObject rac_addObserver:self forKeyPath:otherKeyPath options:NSKeyValueObservingOptionInitial queue:nil block:^(id observer, NSDictionary *change) {
+		@synchronized (version) {
+			if (version.checkOtherObjectForSendAndUpdate) {
+				[otherObjectSubject sendNext:[otherObject valueForKey:otherKeyPath]];
+			}
+		}
+	}];
+	
+	return [RACDisposable disposableWithBlock:^{
+		[otherObject rac_removeObserverWithIdentifier:otherObjectObserverIdentifier];
+		[receiverDisposable dispose];
+		[self rac_removeObserverWithIdentifier:receiverObserverIdentifier];
+		[otherObjectDisposable dispose];
+	}];
+}
 
 - (RACDisposable *)rac_bind:(NSString *)receiverKeyPath transformer:(id (^)(id))receiverTransformer onScheduler:(RACScheduler *)receiverScheduler toObject:(id)otherObject withKeyPath:(NSString *)otherKeyPath transformer:(id (^)(id))otherTransformer onScheduler:(RACScheduler *)otherScheduler {
 	static id (^nilPlaceHolder)(void) = ^{
