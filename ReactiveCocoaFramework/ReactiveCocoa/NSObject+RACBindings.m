@@ -28,7 +28,7 @@
 		id value;
 		
 		@synchronized (countersLock) {
-			BOOL shouldSend = receiverVersion == otherObjectVersion || otherObjectVersion - receiverVersion > UINT32_MAX / 2;
+			BOOL shouldSend = receiverVersion - otherObjectVersion < UINT32_MAX / 2;
 			if (receiverExpectedBounces > 0) {
 				receiverExpectedBounces -= 1;
 				receiverVersion += 1;
@@ -53,7 +53,7 @@
 		id value;
 		
 		@synchronized (countersLock) {
-			BOOL shouldSend = otherObjectVersion == receiverVersion || receiverVersion - otherObjectVersion > UINT32_MAX / 2;
+			BOOL shouldSend = otherObjectVersion - receiverVersion < UINT32_MAX / 2;
 			if (otherObjectExpectedBounces > 0) {
 				otherObjectExpectedBounces -= 1;
 				otherObjectVersion += 1;
