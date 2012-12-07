@@ -46,4 +46,12 @@
 // Returns a disposable that can be used to sever the binding.
 - (RACDisposable *)rac_bind:(NSString *)receiverKeyPath transformer:(id(^)(id value))receiverTransformer onScheduler:(RACScheduler *)receiverScheduler toObject:(id)otherObject withKeyPath:(NSString *)otherKeyPath transformer:(id(^)(id value))otherTransformer onScheduler:(RACScheduler *)otherScheduler;
 
+// Calls `-rac_bind:transformer:onScheduler:toObject:withKeyPath:transformer:onScheduler:`
+// using the default scheduler.
+- (RACDisposable *)rac_bind:(NSString *)receiverKeyPath transformer:(id(^)(id value))receiverTransformer toObject:(id)otherObject withKeyPath:(NSString *)otherKeyPath transformer:(id(^)(id value))otherTransformer;
+
+// Calls `-rac_bind:transformer:toObject:withKeyPath:transformer:` with the
+// identity transformer.
+- (RACDisposable *)rac_bind:(NSString *)receiverKeyPath toObject:(id)otherObject withKeyPath:(NSString *)otherKeyPath;
+
 @end

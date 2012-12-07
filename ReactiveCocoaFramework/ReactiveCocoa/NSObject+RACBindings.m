@@ -80,4 +80,12 @@
 	}];
 }
 
+- (RACDisposable *)rac_bind:(NSString *)receiverKeyPath transformer:(id (^)(id))receiverTransformer toObject:(id)otherObject withKeyPath:(NSString *)otherKeyPath transformer:(id (^)(id))otherTransformer {
+	return [self rac_bind:receiverKeyPath transformer:receiverTransformer onScheduler:nil toObject:otherObject withKeyPath:otherKeyPath transformer:otherTransformer onScheduler:nil];
+}
+
+- (RACDisposable *)rac_bind:(NSString *)receiverKeyPath toObject:(id)otherObject withKeyPath:(NSString *)otherKeyPath {
+	return [self rac_bind:receiverKeyPath transformer:nil onScheduler:nil toObject:otherObject withKeyPath:otherKeyPath transformer:nil onScheduler:nil];
+}
+
 @end
