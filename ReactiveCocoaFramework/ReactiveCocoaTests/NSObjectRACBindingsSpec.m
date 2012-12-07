@@ -21,12 +21,12 @@
 SpecBegin(NSObjectRACBindings)
 
 describe(@"two-way bindings", ^{
-	__block TestClass *a;
-	__block TestClass *b;
-	__block TestClass *c;
-	__block NSString *testName1;
-	__block NSString *testName2;
-	__block NSString *testName3;
+	__block __attribute((objc_precise_lifetime)) TestClass *a;
+	__block __attribute((objc_precise_lifetime)) TestClass *b;
+	__block __attribute((objc_precise_lifetime)) TestClass *c;
+	__block __attribute((objc_precise_lifetime)) NSString *testName1;
+	__block __attribute((objc_precise_lifetime)) NSString *testName2;
+	__block __attribute((objc_precise_lifetime)) NSString *testName3;
 	
 	before(^{
 		a = [[TestClass alloc] init];
@@ -192,10 +192,10 @@ describe(@"two-way bindings", ^{
 		}];
 		
 		while (a.name == nil || b.name == nil) {
-			sleep(1);
+			sleep(0);
 		}
 		while ([a.name isEqual:testName1] && [b.name isEqual:testName2]) {
-			sleep(1);
+			sleep(0);
 		}
 		
 		if ([a.name isEqual:testName1]) {
