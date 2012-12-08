@@ -9,6 +9,8 @@
 #import "NSObject+RACBindings.h"
 #import "EXTKeyPathCoding.h"
 #import "RACSignal.h"
+#import "RACDisposable.h"
+#import "NSObject+RACKVOWrapper.h"
 #import "RACScheduler+Private.h"
 #import <pthread.h>
 #import <mach/thread_act.h>
@@ -191,6 +193,58 @@ describe(@"two-way bindings", ^{
 			expect(b.name).to.equal(testName1);
 		});
 		
+		it(@"should not interfere with other KVO callbacks", ^{
+			__block BOOL firstObserverShouldChangeName = YES;
+			__block BOOL secondObserverShouldChangeName = YES;
+			__block BOOL thirdObserverShouldChangeName = YES;
+			__block BOOL fourthObserverShouldChangeName = YES;
+			__block BOOL observerIsSettingValue = NO;
+			[a rac_addObserver:self forKeyPath:@keypath(a.name) options:NSKeyValueObservingOptionPrior | NSKeyValueObservingOptionNew queue:nil block:^(id observer, NSDictionary *change) {
+				if (observerIsSettingValue) return;
+				if (firstObserverShouldChangeName) {
+					firstObserverShouldChangeName = NO;
+					observerIsSettingValue = YES;
+					a.name = testName1;
+					observerIsSettingValue = NO;
+				}
+			}];
+			[a rac_addObserver:self forKeyPath:@keypath(a.name) options:NSKeyValueObservingOptionOld queue:nil block:^(id observer, NSDictionary *change) {
+				if (observerIsSettingValue) return;
+				if (secondObserverShouldChangeName) {
+					secondObserverShouldChangeName = NO;
+					observerIsSettingValue = YES;
+					a.name = testName2;
+					observerIsSettingValue = NO;
+				}
+			}];
+			[a rac_bind:@keypath(a.name) transformer:nil onScheduler:nil toObject:b withKeyPath:@keypath(b.name) transformer:nil onScheduler:nil];
+			[a rac_addObserver:self forKeyPath:@keypath(a.name) options:NSKeyValueObservingOptionPrior | NSKeyValueObservingOptionNew queue:nil block:^(id observer, NSDictionary *change) {
+				if (observerIsSettingValue) return;
+				if (thirdObserverShouldChangeName) {
+					thirdObserverShouldChangeName = NO;
+					observerIsSettingValue = YES;
+					a.name = testName1;
+					observerIsSettingValue = NO;
+				}
+			}];
+			[a rac_addObserver:self forKeyPath:@keypath(a.name) options:NSKeyValueObservingOptionOld queue:nil block:^(id observer, NSDictionary *change) {
+				if (observerIsSettingValue) return;
+				if (fourthObserverShouldChangeName) {
+					fourthObserverShouldChangeName = NO;
+					observerIsSettingValue = YES;
+					a.name = testName2;
+					observerIsSettingValue = NO;
+				}
+			}];
+			a.name = testName3;
+			expect(firstObserverShouldChangeName).to.beFalsy();
+			expect(secondObserverShouldChangeName).to.beFalsy();
+			expect(thirdObserverShouldChangeName).to.beFalsy();
+			expect(fourthObserverShouldChangeName).to.beFalsy();
+			expect(a.name).to.equal(testName2);
+			expect(b.name).to.equal(testName2);
+		});
+		
 		it(@"should trasform values of bound properties", ^{
 			[a rac_bind:@keypath(a.name) transformer:^(NSString *value) {
 				return [NSString stringWithFormat:@"%@.%@", value, c.name];
@@ -248,6 +302,20 @@ describe(@"two-way bindings", ^{
 		expect(cCounter).to.equal(4);
 	});
 	
+	it(@"should stop binding when disposed", ^{
+		RACScheduler *aScheduler = [RACScheduler backgroundScheduler];
+		RACScheduler *bScheduler = [RACScheduler backgroundScheduler];
+
+		RACDisposable *disposable = [a rac_bind:@keypath(a.name) transformer:nil onScheduler:aScheduler toObject:b withKeyPath:@keypath(b.name) transformer:nil onScheduler:bScheduler];
+		
+		a.name = testName1;
+		[disposable dispose];
+		a.name = testName2;
+		
+		expect(a.name).will.equal(testName2);
+		expect(b.name).will.equal(testName1);
+	});
+	
 	it(@"should handle the bound objects being changed at the same time on different threads", ^{
 		RACScheduler *aScheduler = [[RACRacingScheduler alloc] init];
 		RACScheduler *bScheduler = [[RACRacingScheduler alloc] init];
@@ -286,6 +354,44 @@ describe(@"two-way bindings", ^{
 			expect(a.name).will.equal(b.name);
 		}
 	});
+	
+	it(@"should handle one of the bound objects being changed at the same time on different threads", ^{
+		RACScheduler *firstScheduler = [[RACRacingScheduler alloc] init];
+		RACScheduler *secondScheduler = [[RACRacingScheduler alloc] init];
+		
+		[a rac_bind:@keypath(a.name) transformer:nil onScheduler:nil toObject:b withKeyPath:@keypath(b.name) transformer:nil onScheduler:nil];
+		
+		// Race conditions aren't deterministic, so loop this test more times to catch them.
+		// Change it back to 1 before committing so it's friendly on the CI testing.
+		for (NSUInteger i = 0; i < 1; ++i) {
+			a.name = nil;
+			expect(a.name).to.beNil();
+			expect(b.name).to.beNil();
+			
+			__block volatile uint32_t firstReady = 0;
+			__block volatile uint32_t secondReady = 0;
+			[firstScheduler schedule:^{
+				OSAtomicOr32Barrier(1, &firstReady);
+				while (!secondReady) {
+					// do nothing while waiting for b, sleeping might hide the race
+				}
+				a.name = testName1;
+			}];
+			[secondScheduler schedule:^{
+				OSAtomicOr32Barrier(1, &secondReady);
+				while (!firstReady) {
+					// do nothing while waiting for a, sleeping might hide the race
+				}
+				a.name = testName2;
+			}];
+			
+			expect(a.name).willNot.beNil();
+			expect(b.name).willNot.beNil();
+			
+			expect(a.name).will.equal(b.name);
+		}
+	});
+
 });
 
 SpecEnd
