@@ -88,17 +88,19 @@ static void *RACRacingSchedulerStartRoutine(void *arg) {
 	}
 }
 
-- (void)schedule:(void (^)(void))block {
+- (RACDisposable *)schedule:(void (^)(void))block {
 	NSParameterAssert(block != nil);
 	@synchronized(_data) {
 		[_data.blockQueue insertObject:[block copy] atIndex:0];
 	}
+	return nil;
 }
 
 @end
 
 @interface TestClass : NSObject
 @property (nonatomic, strong) NSString *name;
+@property (nonatomic, strong) TestClass *relatedObject;
 @end
 
 @implementation TestClass
@@ -136,6 +138,23 @@ describe(@"-rac_bind:signalBlock:toObject:withKeyPath:signalBlock:", ^{
 		a.name = nil;
 		expect(a.name).to.beNil();
 		expect(b.name).to.beNil();
+	});
+	
+	it(@"should keep properties identified by keypaths in sync", ^{
+		[a rac_bind:@keypath(a.relatedObject.name) signalBlock:nil toObject:b withKeyPath:@keypath(b.relatedObject.name) signalBlock:nil];
+		a.relatedObject = [[TestClass alloc] init];
+		b.relatedObject = [[TestClass alloc] init];
+		a.relatedObject.name = testName1;
+		expect(a.relatedObject.name).to.equal(testName1);
+		expect(b.relatedObject.name).to.equal(testName1);
+		expect(a.relatedObject != b.relatedObject).to.beTruthy();
+		b.relatedObject = nil;
+		expect(a.relatedObject.name).to.beNil();
+		c.name = testName2;
+		b.relatedObject = c;
+		expect(a.relatedObject.name).to.equal(testName2);
+		expect(b.relatedObject.name).to.equal(testName2);
+		expect(a.relatedObject != b.relatedObject).to.beTruthy();
 	});
 	
 	it(@"should take the master's value at the start", ^{
@@ -191,7 +210,7 @@ describe(@"-rac_bind:signalBlock:toObject:withKeyPath:signalBlock:", ^{
 		expect(b.name).to.equal(testName1);
 	});
 	
-	it(@"should not interfere with other KVO callbacks", ^{
+	it(@"should not interfere with or be interfered by KVO callbacks", ^{
 		__block BOOL firstObserverShouldChangeName = YES;
 		__block BOOL secondObserverShouldChangeName = YES;
 		__block BOOL thirdObserverShouldChangeName = YES;
@@ -310,21 +329,14 @@ describe(@"-rac_bind:signalBlock:toObject:withKeyPath:signalBlock:", ^{
 	});
 	
 	it(@"should stop binding when disposed", ^{
-		RACScheduler *aScheduler = [RACScheduler backgroundScheduler];
-		RACScheduler *bScheduler = [RACScheduler backgroundScheduler];
-		
-		RACDisposable *disposable = [a rac_bind:@keypath(a.name) signalBlock:^id<RACSignal>(id<RACSignal> signal) {
-			return [signal subscribeOn:aScheduler];
-		} toObject:b withKeyPath:@keypath(b.name) signalBlock:^id<RACSignal>(id<RACSignal> signal) {
-			return [signal subscribeOn:bScheduler];
-		}];
-		
+		RACDisposable *disposable = [a rac_bind:@keypath(a.name) signalBlock:nil toObject:b withKeyPath:@keypath(b.name) signalBlock:nil];
 		a.name = testName1;
+		expect(a.name).to.equal(testName1);
+		expect(b.name).to.equal(testName1);
 		[disposable dispose];
 		a.name = testName2;
-		
-		expect(a.name).will.equal(testName2);
-		expect(b.name).will.equal(testName1);
+		expect(a.name).to.equal(testName2);
+		expect(b.name).to.equal(testName1);
 	});
 	
 	it(@"should handle the bound objects being changed at the same time on different threads", ^{
@@ -366,7 +378,7 @@ describe(@"-rac_bind:signalBlock:toObject:withKeyPath:signalBlock:", ^{
 			expect(a.name).willNot.beNil();
 			expect(b.name).willNot.beNil();
 			
-			expect(a.name).will.equal(b.name);
+			expect([a.name isEqualToString:b.name]).will.beTruthy();
 		}
 	});
 });
