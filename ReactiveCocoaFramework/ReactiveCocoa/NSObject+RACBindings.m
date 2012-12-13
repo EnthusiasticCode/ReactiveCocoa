@@ -8,6 +8,7 @@
 
 #import "NSObject+RACBindings.h"
 #import "NSObject+RACKVOWrapper.h"
+#import "EXTScope.h"
 #import "RACDisposable.h"
 #import "RACScheduler.h"
 #import "RACSubject.h"
@@ -24,8 +25,10 @@
 	__block NSUInteger receiverExpectedBounces = 0;
 	__block NSUInteger otherObjectExpectedBounces = 0;
 	
+	@weakify(otherObject);
 	RACDisposable *receiverDisposable = [(receiverSignalBlock ? receiverSignalBlock(receiverSubject) : receiverSubject) subscribeNext:^(id x) {
 		@synchronized (countersLock) {
+			@strongify(otherObject);
 			otherObjectExpectedBounces += 1;
 			[otherObject setValue:x forKeyPath:otherKeyPath];
 		}
@@ -49,8 +52,10 @@
 		[receiverSubject sendNext:value];
 	}];
 	
+	@weakify(self);
 	RACDisposable *otherObjectDisposable = [(otherSignalBlock ? otherSignalBlock(otherObjectSubject) : otherObjectSubject) subscribeNext:^(id x) {
 		@synchronized (countersLock) {
+			@strongify(self);
 			receiverExpectedBounces += 1;
 			[self setValue:x forKeyPath:receiverKeyPath];
 		}
