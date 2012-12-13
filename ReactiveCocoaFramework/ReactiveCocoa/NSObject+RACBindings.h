@@ -8,7 +8,10 @@
 
 #import <Foundation/Foundation.h>
 
-@class RACDisposable, RACScheduler;
+@class RACDisposable;
+@protocol RACSignal;
+
+typedef id<RACSignal> (^RACSignalTransformationBlock)(id<RACSignal> signal);
 
 @interface NSObject (RACBindings)
 
@@ -20,24 +23,16 @@
 // in sync by forwarding changes to one onto the other.
 //
 // receiverKeyPath     - The key path of the receiver to bind.
-// receiverScheduler   - An optional scheduler on which all accesses to the
-//                       receiver will be scheduled. If not specified, the
-//                       receiver will be accessed from wherever the binding
-//                       target is modified.
-// receiverTransformer - An optional block with which to transform values from
-//                       the receiver to the binding target. Will be scheduled
-//                       on `receiverScheduler`.
+// receiverSignalBlock - An optional block that returns a signal with which to
+//                       transform values from the receiver to the binding
+//                       target.
 // otherObject         - The object with which to bind the receiver.
 // otherKeyPath        - The key path of the binding target to bind.
-// otherScheduler      - An optional scheduler on which all accesses to the
-//                       binding target will be scheduled. if not specified, the
-//                       binding target will be accessed from wherever the
-//                       receiver is modified.
-// otherTransformer    - An optional block with which to transform values from
-//                       the binding target to the receiver. Will be scheduled
-//                       on `otherScheduler`.
+// otherSignalBlock    - An optional block that returns a signal with which to
+//                       transform values from the binding target to the
+//                       receiver.
 // 
 // Returns a disposable that can be used to sever the binding.
-- (RACDisposable *)rac_bind:(NSString *)receiverKeyPath transformer:(id(^)(id value))receiverTransformer onScheduler:(RACScheduler *)receiverScheduler toObject:(id)otherObject withKeyPath:(NSString *)otherKeyPath transformer:(id(^)(id value))otherTransformer onScheduler:(RACScheduler *)otherScheduler;
+- (RACDisposable *)rac_bind:(NSString *)receiverKeyPath signalBlock:(RACSignalTransformationBlock)receiverSignalBlock toObject:(id)otherObject withKeyPath:(NSString *)otherKeyPath signalBlock:(RACSignalTransformationBlock)otherSignalBlock;
 
 @end
