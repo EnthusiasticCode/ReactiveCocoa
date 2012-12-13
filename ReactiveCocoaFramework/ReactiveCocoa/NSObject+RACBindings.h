@@ -23,14 +23,14 @@ typedef id<RACSignal> (^RACSignalTransformationBlock)(id<RACSignal> signal);
 // in sync by forwarding changes to one onto the other.
 //
 // receiverKeyPath     - The key path of the receiver to bind.
-// receiverSignalBlock - An optional block with which to transform values from
-//                       the receiver to the binding target. Must be
-//                       thread-safe.
+// receiverSignalBlock - An optional block that returns a signal with which to
+//                       transform values from the receiver to the binding
+//                       target.
 // otherObject         - The object with which to bind the receiver.
 // otherKeyPath        - The key path of the binding target to bind.
-// otherSignalBlock    - An optional block with which to transform values from
-//                       the binding target to the receiver. Must be
-//                       thread-safe.
+// otherSignalBlock    - An optional block that returns a signal with which to
+//                       transform values from the binding target to the
+//                       receiver.
 // 
 // Returns a disposable that can be used to sever the binding.
 - (RACDisposable *)rac_bind:(NSString *)receiverKeyPath signalBlock:(RACSignalTransformationBlock)receiverSignalBlock toObject:(id)otherObject withKeyPath:(NSString *)otherKeyPath signalBlock:(RACSignalTransformationBlock)otherSignalBlock;
