@@ -10,13 +10,13 @@
 #import "NSObject+RACKVOWrapper.h"
 #import "RACDisposable.h"
 #import "RACScheduler.h"
-
+#import "RACSubject.h"
 
 @implementation NSObject (RACBindings)
 
-- (RACDisposable *)rac_bind:(NSString *)receiverKeyPath transformer:(id (^)(id))receiverTransformer onScheduler:(RACScheduler *)receiverScheduler toObject:(id)otherObject withKeyPath:(NSString *)otherKeyPath transformer:(id (^)(id))otherTransformer onScheduler:(RACScheduler *)otherScheduler {
-	if (receiverScheduler == nil) receiverScheduler = RACScheduler.immediateScheduler;
-	if (otherScheduler == nil) otherScheduler = RACScheduler.immediateScheduler;
+- (RACDisposable *)rac_bind:(NSString *)receiverKeyPath signalBlock:(RACSignalTransformationBlock)receiverSignalBlock toObject:(id)otherObject withKeyPath:(NSString *)otherKeyPath signalBlock:(RACSignalTransformationBlock)otherSignalBlock {
+	RACSubject *receiverSubject = [RACSubject subject];
+	RACSubject *otherObjectSubject = [RACSubject subject];
 	
 	NSObject *countersLock = [[NSObject alloc] init];
 	__block uint32_t receiverVersion = 0;
@@ -24,7 +24,14 @@
 	__block uint32_t receiverExpectedBounces = 0;
 	__block uint32_t otherObjectExpectedBounces = 0;
 	
-	id receiverObserverIdentifier = [self rac_addObserver:otherObject forKeyPath:receiverKeyPath options:NSKeyValueObservingOptionNew queue:nil block:^(id observer, NSDictionary *change) {
+	RACDisposable *receiverDisposable = [(receiverSignalBlock ? receiverSignalBlock(receiverSubject) : receiverSubject) subscribeNext:^(id x) {
+		@synchronized (countersLock) {
+			otherObjectExpectedBounces += 1;
+			[otherObject setValue:x forKeyPath:otherKeyPath];
+		}
+	}];
+	
+	id receiverObserverIdentifier = [self rac_addObserver:otherObject forKeyPath:receiverKeyPath options:0 queue:nil block:^(id observer, NSDictionary *change) {
 		id value;
 		
 		@synchronized (countersLock) {
@@ -36,21 +43,20 @@
 			
 			if (!shouldSend) return;
 			receiverVersion += 1;
-			value = change[NSKeyValueChangeNewKey]; //[self valueForKeyPath:receiverKeyPath];
-			if (value == [NSNull null]) value = nil;
+			value = [self valueForKeyPath:receiverKeyPath];
 		}
 		
-		if (receiverTransformer != nil) value = receiverTransformer(value);
-		
-		[otherScheduler schedule:^{
-			@synchronized (countersLock) {
-				otherObjectExpectedBounces += 1;
-				[otherObject setValue:value forKeyPath:otherKeyPath];
-			}
-		}];
+		[receiverSubject sendNext:value];
 	}];
 	
-	id otherObjectObserverIdentifier = [otherObject rac_addObserver:self forKeyPath:otherKeyPath options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial queue:nil block:^(id observer, NSDictionary *change) {
+	RACDisposable *otherObjectDisposable = [(otherSignalBlock ? otherSignalBlock(otherObjectSubject) : otherObjectSubject) subscribeNext:^(id x) {
+		@synchronized (countersLock) {
+			receiverExpectedBounces += 1;
+			[self setValue:x forKeyPath:receiverKeyPath];
+		}
+	}];
+	
+	id otherObjectObserverIdentifier = [otherObject rac_addObserver:self forKeyPath:otherKeyPath options:NSKeyValueObservingOptionInitial queue:nil block:^(id observer, NSDictionary *change) {
 		id value;
 		
 		@synchronized (countersLock) {
@@ -62,32 +68,18 @@
 			
 			if (!shouldSend) return;
 			otherObjectVersion += 1;
-			value = change[NSKeyValueChangeNewKey]; //[otherObject valueForKeyPath:otherKeyPath];
-			if (value == [NSNull null]) value = nil;
+			value = [otherObject valueForKeyPath:otherKeyPath];
 		}
 		
-		if (otherTransformer != nil) value = otherTransformer(value);
-		
-		[receiverScheduler schedule:^{
-			@synchronized (countersLock) {
-				receiverExpectedBounces += 1;
-				[self setValue:value forKeyPath:receiverKeyPath];
-			}
-		}];
+		[otherObjectSubject sendNext:value];
 	}];
 	
 	return [RACDisposable disposableWithBlock:^{
+		[receiverDisposable dispose];
+		[otherObjectDisposable dispose];
 		[self rac_removeObserverWithIdentifier:receiverObserverIdentifier];
 		[otherObject rac_removeObserverWithIdentifier:otherObjectObserverIdentifier];
 	}];
-}
-
-- (RACDisposable *)rac_bind:(NSString *)receiverKeyPath transformer:(id (^)(id))receiverTransformer toObject:(id)otherObject withKeyPath:(NSString *)otherKeyPath transformer:(id (^)(id))otherTransformer {
-	return [self rac_bind:receiverKeyPath transformer:receiverTransformer onScheduler:nil toObject:otherObject withKeyPath:otherKeyPath transformer:otherTransformer onScheduler:nil];
-}
-
-- (RACDisposable *)rac_bind:(NSString *)receiverKeyPath toObject:(id)otherObject withKeyPath:(NSString *)otherKeyPath {
-	return [self rac_bind:receiverKeyPath transformer:nil onScheduler:nil toObject:otherObject withKeyPath:otherKeyPath transformer:nil onScheduler:nil];
 }
 
 @end
