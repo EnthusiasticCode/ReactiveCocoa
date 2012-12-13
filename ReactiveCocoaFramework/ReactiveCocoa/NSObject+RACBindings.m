@@ -19,10 +19,10 @@
 	RACSubject *otherObjectSubject = [RACSubject subject];
 	
 	NSObject *countersLock = [[NSObject alloc] init];
-	__block uint32_t receiverVersion = 0;
-	__block uint32_t otherObjectVersion = 0;
-	__block uint32_t receiverExpectedBounces = 0;
-	__block uint32_t otherObjectExpectedBounces = 0;
+	__block NSUInteger receiverVersion = 0;
+	__block NSUInteger otherObjectVersion = 0;
+	__block NSUInteger receiverExpectedBounces = 0;
+	__block NSUInteger otherObjectExpectedBounces = 0;
 	
 	RACDisposable *receiverDisposable = [(receiverSignalBlock ? receiverSignalBlock(receiverSubject) : receiverSubject) subscribeNext:^(id x) {
 		@synchronized (countersLock) {
