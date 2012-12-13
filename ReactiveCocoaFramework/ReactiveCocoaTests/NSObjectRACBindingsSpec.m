@@ -344,9 +344,9 @@ describe(@"-rac_bind:signalBlock:toObject:withKeyPath:signalBlock:", ^{
 		RACScheduler *bScheduler = [[RACRacingScheduler alloc] init];
 		
 		[a rac_bind:@keypath(a.name) signalBlock:^id<RACSignal>(id<RACSignal> signal) {
-			return [signal subscribeOn:aScheduler];
+			return [signal deliverOn:aScheduler];
 		} toObject:b withKeyPath:@keypath(b.name) signalBlock:^id<RACSignal>(id<RACSignal> signal) {
-			return [signal subscribeOn:bScheduler];
+			return [signal deliverOn:bScheduler];
 		}];
 		
 		// Race conditions aren't deterministic, so loop this test more times to catch them.
