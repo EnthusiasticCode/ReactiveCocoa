@@ -16,6 +16,9 @@
 @implementation NSObject (RACBindings)
 
 - (RACDisposable *)rac_bind:(NSString *)receiverKeyPath signalBlock:(RACSignalTransformationBlock)receiverSignalBlock toObject:(id)otherObject withKeyPath:(NSString *)otherKeyPath signalBlock:(RACSignalTransformationBlock)otherSignalBlock {
+	@weakify(self);
+	@weakify(otherObject);
+	
 	RACSubject *receiverSubject = [RACSubject subject];
 	RACSubject *otherObjectSubject = [RACSubject subject];
 	
@@ -25,12 +28,19 @@
 	__block NSUInteger receiverExpectedBounces = 0;
 	__block NSUInteger otherObjectExpectedBounces = 0;
 	
-	@weakify(otherObject);
 	RACDisposable *receiverDisposable = [(receiverSignalBlock ? receiverSignalBlock(receiverSubject) : receiverSubject) subscribeNext:^(id x) {
 		@synchronized (countersLock) {
 			@strongify(otherObject);
 			otherObjectExpectedBounces += 1;
 			[otherObject setValue:x forKeyPath:otherKeyPath];
+		}
+	}];
+	
+	RACDisposable *otherObjectDisposable = [(otherSignalBlock ? otherSignalBlock(otherObjectSubject) : otherObjectSubject) subscribeNext:^(id x) {
+		@synchronized (countersLock) {
+			@strongify(self);
+			receiverExpectedBounces += 1;
+			[self setValue:x forKeyPath:receiverKeyPath];
 		}
 	}];
 	
@@ -46,19 +56,12 @@
 			
 			if (!shouldSend) return;
 			receiverVersion += 1;
+			
+			@strongify(self);
 			value = [self valueForKeyPath:receiverKeyPath];
 		}
 		
 		[receiverSubject sendNext:value];
-	}];
-	
-	@weakify(self);
-	RACDisposable *otherObjectDisposable = [(otherSignalBlock ? otherSignalBlock(otherObjectSubject) : otherObjectSubject) subscribeNext:^(id x) {
-		@synchronized (countersLock) {
-			@strongify(self);
-			receiverExpectedBounces += 1;
-			[self setValue:x forKeyPath:receiverKeyPath];
-		}
 	}];
 	
 	id otherObjectObserverIdentifier = [otherObject rac_addObserver:self forKeyPath:otherKeyPath options:NSKeyValueObservingOptionInitial queue:nil block:^(id observer, NSDictionary *change) {
@@ -73,6 +76,8 @@
 			
 			if (!shouldSend) return;
 			otherObjectVersion += 1;
+			
+			@strongify(otherObject);
 			value = [otherObject valueForKeyPath:otherKeyPath];
 		}
 		
