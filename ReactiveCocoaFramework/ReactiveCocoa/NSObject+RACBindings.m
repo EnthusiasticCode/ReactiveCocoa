@@ -25,13 +25,13 @@
 	NSObject *countersLock = [[NSObject alloc] init];
 	__block NSUInteger receiverVersion = 0;
 	__block NSUInteger otherObjectVersion = 0;
-	__block NSUInteger receiverExpectedBounces = 0;
-	__block NSUInteger otherObjectExpectedBounces = 0;
+	__block BOOL receiverExpectedBounces = NO;
+	__block BOOL otherObjectExpectedBounces = NO;
 	
 	RACDisposable *receiverDisposable = [(receiverSignalBlock ? receiverSignalBlock(receiverSubject) : receiverSubject) subscribeNext:^(id x) {
 		@synchronized (countersLock) {
 			@strongify(otherObject);
-			otherObjectExpectedBounces += 1;
+			otherObjectExpectedBounces = YES;
 			[otherObject setValue:x forKeyPath:otherKeyPath];
 		}
 	}];
@@ -39,7 +39,7 @@
 	RACDisposable *otherObjectDisposable = [(otherSignalBlock ? otherSignalBlock(otherObjectSubject) : otherObjectSubject) subscribeNext:^(id x) {
 		@synchronized (countersLock) {
 			@strongify(self);
-			receiverExpectedBounces += 1;
+			receiverExpectedBounces = YES;
 			[self setValue:x forKeyPath:receiverKeyPath];
 		}
 	}];
@@ -49,8 +49,8 @@
 		
 		@synchronized (countersLock) {
 			BOOL shouldSend = receiverVersion - otherObjectVersion < UINT32_MAX / 2;
-			if (receiverExpectedBounces > 0) {
-				receiverExpectedBounces -= 1;
+			if (receiverExpectedBounces) {
+				receiverExpectedBounces = NO;
 				receiverVersion += 1;
 			}
 			
@@ -69,8 +69,8 @@
 		
 		@synchronized (countersLock) {
 			BOOL shouldSend = otherObjectVersion - receiverVersion < UINT32_MAX / 2;
-			if (otherObjectExpectedBounces > 0) {
-				otherObjectExpectedBounces -= 1;
+			if (otherObjectExpectedBounces) {
+				otherObjectExpectedBounces = NO;
 				otherObjectVersion += 1;
 			}
 			
