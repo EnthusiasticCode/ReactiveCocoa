@@ -121,13 +121,8 @@ const void *RACSchedulerCurrentSchedulerKey = &RACSchedulerCurrentSchedulerKey;
 	return disposable;
 }
 
-- (void)scheduleRecursiveBlock:(RACSchedulerRecursiveBlock)recursiveBlock addingToDisposable:(__weak RACCompoundDisposable *)disposable isDisposedBlock:(BOOL (^)(void))isDisposed {
-	__block __weak RACDisposable *selfDisposable = nil;
-
+- (void)scheduleRecursiveBlock:(RACSchedulerRecursiveBlock)recursiveBlock addingToDisposable:(RACCompoundDisposable *)disposable isDisposedBlock:(BOOL (^)(void))isDisposed {
 	RACDisposable *schedulingDisposable = [self schedule:^{
-		// At this point, we've been invoked, so our disposable is now useless.
-		[disposable removeDisposable:selfDisposable];
-
 		if (isDisposed()) return;
 
 		__block NSUInteger rescheduleCount = 0;
@@ -142,10 +137,7 @@ const void *RACSchedulerCurrentSchedulerKey = &RACSchedulerCurrentSchedulerKey;
 		}
 	}];
 
-	if (schedulingDisposable != nil) {
-		[disposable addDisposable:schedulingDisposable];
-		selfDisposable = schedulingDisposable;
-	}
+	if (schedulingDisposable != nil) [disposable addDisposable:schedulingDisposable];
 }
 
 @end

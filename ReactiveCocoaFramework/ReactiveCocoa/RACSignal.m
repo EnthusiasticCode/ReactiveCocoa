@@ -200,21 +200,15 @@ static NSMutableSet *activeSignals() {
 		NSMutableArray *signals = [NSMutableArray arrayWithObject:self];
 		RACCompoundDisposable *compoundDisposable = [RACCompoundDisposable compoundDisposable];
 
-		void (^completeSignal)(RACSignal *, RACDisposable *) = ^(RACSignal *signal, RACDisposable *finishedDisposable) {
-			BOOL removeDisposable = NO;
-
+		void (^completeSignal)(RACSignal *) = ^(RACSignal *signal) {
 			@synchronized (signals) {
 				[signals removeObject:signal];
 
 				if (signals.count == 0) {
 					[subscriber sendCompleted];
 					[compoundDisposable dispose];
-				} else {
-					removeDisposable = YES;
 				}
 			}
-
-			if (removeDisposable) [compoundDisposable removeDisposable:finishedDisposable];
 		};
 
 		void (^addSignal)(RACSignal *) = ^(RACSignal *signal) {
@@ -222,42 +216,32 @@ static NSMutableSet *activeSignals() {
 				[signals addObject:signal];
 			}
 
-			__block __weak RACDisposable *selfDisposable = nil;
-
 			RACDisposable *disposable = [signal subscribeNext:^(id x) {
 				[subscriber sendNext:x];
 			} error:^(NSError *error) {
 				[compoundDisposable dispose];
 				[subscriber sendError:error];
 			} completed:^{
-				completeSignal(signal, selfDisposable);
+				completeSignal(signal);
 			}];
 
-			if (disposable != nil) {
-				[compoundDisposable addDisposable:disposable];
-				selfDisposable = disposable;
-			}
+			if (disposable != nil) [compoundDisposable addDisposable:disposable];
 		};
-
-		__block __weak RACDisposable *selfDisposable = nil;
 
 		RACDisposable *bindingDisposable = [self subscribeNext:^(id x) {
 			BOOL stop = NO;
 			id signal = bindingBlock(x, &stop);
 
 			if (signal != nil) addSignal(signal);
-			if (signal == nil || stop) completeSignal(self, selfDisposable);
+			if (signal == nil || stop) completeSignal(self);
 		} error:^(NSError *error) {
 			[compoundDisposable dispose];
 			[subscriber sendError:error];
 		} completed:^{
-			completeSignal(self, selfDisposable);
+			completeSignal(self);
 		}];
 
-		if (bindingDisposable != nil) {
-			[compoundDisposable addDisposable:bindingDisposable];
-			selfDisposable = bindingDisposable;
-		}
+		if (bindingDisposable != nil) [compoundDisposable addDisposable:bindingDisposable];
 
 		return compoundDisposable;
 	}] setNameWithFormat:@"[%@] -bind:", self.name];
