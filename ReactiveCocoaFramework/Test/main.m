@@ -37,12 +37,14 @@ int main(int argc, const char * argv[]) {
 	
 	@autoreleasepool {
 		
+		NSEnumerator *enumerator = [CountUpToXEnumerator countUpTo:1000000];
 		__block NSUInteger sum = 0;
-		[[CountUpToXEnumerator countUpTo:1000000].rac_signal subscribeNext:^(NSNumber *x) {
-			sum += x.unsignedIntegerValue;
-		} completed:^{
-			NSLog(@"%@", @(sum));
-			exit(0);
+		[[RACScheduler scheduler] scheduleRecursiveBlock:^(void (^reschedule)(void)) {
+			@autoreleasepool {
+				NSNumber *nextNumber = [enumerator nextObject];
+				sum += nextNumber.unsignedIntegerValue;
+			}
+			reschedule();
 		}];
 		
 	}
