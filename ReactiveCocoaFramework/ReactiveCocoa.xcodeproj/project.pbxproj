@@ -7,11 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		5F124D4D169B923200F992F6 /* NSEnumerator+RACSignalAdditions.h in Headers */ = {isa = PBXBuildFile; fileRef = 5F124D4B169B923200F992F6 /* NSEnumerator+RACSignalAdditions.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		5F124D4E169B923200F992F6 /* NSEnumerator+RACSignalAdditions.h in Headers */ = {isa = PBXBuildFile; fileRef = 5F124D4B169B923200F992F6 /* NSEnumerator+RACSignalAdditions.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		5F124D4F169B923200F992F6 /* NSEnumerator+RACSignalAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = 5F124D4C169B923200F992F6 /* NSEnumerator+RACSignalAdditions.m */; };
-		5F124D50169B923200F992F6 /* NSEnumerator+RACSignalAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = 5F124D4C169B923200F992F6 /* NSEnumerator+RACSignalAdditions.m */; };
-		5F124D52169B9BA700F992F6 /* NSEnumeratorRACSignalAdditionsSpec.m in Sources */ = {isa = PBXBuildFile; fileRef = 5F124D51169B9BA700F992F6 /* NSEnumeratorRACSignalAdditionsSpec.m */; };
 		5F498AA9169CD50300E19C87 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5F498AA8169CD50300E19C87 /* Foundation.framework */; };
 		5F498AAC169CD50300E19C87 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 5F498AAB169CD50300E19C87 /* main.m */; };
 		5F498AB0169CD50300E19C87 /* Test.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5F498AAF169CD50300E19C87 /* Test.1 */; };
@@ -351,9 +346,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		5F124D4B169B923200F992F6 /* NSEnumerator+RACSignalAdditions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSEnumerator+RACSignalAdditions.h"; sourceTree = "<group>"; };
-		5F124D4C169B923200F992F6 /* NSEnumerator+RACSignalAdditions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSEnumerator+RACSignalAdditions.m"; sourceTree = "<group>"; };
-		5F124D51169B9BA700F992F6 /* NSEnumeratorRACSignalAdditionsSpec.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NSEnumeratorRACSignalAdditionsSpec.m; sourceTree = "<group>"; };
 		5F498AA6169CD50200E19C87 /* Test */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Test; sourceTree = BUILT_PRODUCTS_DIR; };
 		5F498AA8169CD50300E19C87 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		5F498AAB169CD50300E19C87 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
@@ -686,8 +678,6 @@
 				D0E967601641EF9C00FCFF06 /* NSString+RACSequenceAdditions.m */,
 				5F773DE8169B46670023069D /* NSEnumerator+RACSequenceAdditions.h */,
 				5F773DE9169B46670023069D /* NSEnumerator+RACSequenceAdditions.m */,
-				5F124D4B169B923200F992F6 /* NSEnumerator+RACSignalAdditions.h */,
-				5F124D4C169B923200F992F6 /* NSEnumerator+RACSignalAdditions.m */,
 			);
 			name = "Foundation Support";
 			sourceTree = "<group>";
@@ -788,7 +778,6 @@
 				D0D487051642651400DD7605 /* RACSequenceSpec.m */,
 				5F773DEF169B48830023069D /* NSEnumeratorRACSequenceAdditionsSpec.m */,
 				8820937B1501C8A600796685 /* RACSignalSpec.m */,
-				5F124D51169B9BA700F992F6 /* NSEnumeratorRACSignalAdditionsSpec.m */,
 				D0487AB1164314430085D890 /* RACStreamExamples.h */,
 				D0487AB2164314430085D890 /* RACStreamExamples.m */,
 				889D0A7F15974B2A00F833E3 /* RACSubjectSpec.m */,
@@ -1104,7 +1093,6 @@
 				881E87C41669636000667F7B /* RACSubscriptionScheduler.h in Headers */,
 				D005A259169A3B7D00A9D2DB /* RACBacktrace.h in Headers */,
 				5F773DEA169B46670023069D /* NSEnumerator+RACSequenceAdditions.h in Headers */,
-				5F124D4D169B923200F992F6 /* NSEnumerator+RACSignalAdditions.h in Headers */,
 				D077A16D169B740200057BB1 /* RACEvent.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1157,7 +1145,6 @@
 				D08FF28F169A337000743C6D /* metamacros.h in Headers */,
 				D08FF2A3169A33D100743C6D /* NSObject+RACBindings.h in Headers */,
 				5F773DEB169B46670023069D /* NSEnumerator+RACSequenceAdditions.h in Headers */,
-				5F124D4E169B923200F992F6 /* NSEnumerator+RACSignalAdditions.h in Headers */,
 				D077A16E169B740200057BB1 /* RACEvent.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1434,7 +1421,6 @@
 				88C5A026169246140045EF05 /* RACMulticastConnection.m in Sources */,
 				5F9743F91694A2460024EB82 /* RACEagerSequence.m in Sources */,
 				5F773DEC169B46670023069D /* NSEnumerator+RACSequenceAdditions.m in Sources */,
-				5F124D4F169B923200F992F6 /* NSEnumerator+RACSignalAdditions.m in Sources */,
 				D077A16F169B740200057BB1 /* RACEvent.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1472,7 +1458,6 @@
 				88C5A02916924BFC0045EF05 /* RACMulticastConnectionSpec.m in Sources */,
 				D0EDE76716968AB10072A780 /* RACPropertySignalExamples.m in Sources */,
 				5F773DF0169B48830023069D /* NSEnumeratorRACSequenceAdditionsSpec.m in Sources */,
-				5F124D52169B9BA700F992F6 /* NSEnumeratorRACSignalAdditionsSpec.m in Sources */,
 				D077A172169B79A900057BB1 /* RACEventSpec.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1532,7 +1517,6 @@
 				88C5A027169246140045EF05 /* RACMulticastConnection.m in Sources */,
 				5F9743FA1694A2460024EB82 /* RACEagerSequence.m in Sources */,
 				5F773DED169B46670023069D /* NSEnumerator+RACSequenceAdditions.m in Sources */,
-				5F124D50169B923200F992F6 /* NSEnumerator+RACSignalAdditions.m in Sources */,
 				D077A170169B740200057BB1 /* RACEvent.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
