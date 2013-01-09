@@ -38,15 +38,18 @@ int main(int argc, const char * argv[]) {
 	@autoreleasepool {
 		
 		NSEnumerator *enumerator = [CountUpToXEnumerator countUpTo:1000000];
-		__block NSUInteger sum = 0;
-		[[RACScheduler scheduler] scheduleRecursiveBlock:^(void (^reschedule)(void)) {
-			@autoreleasepool {
-				NSNumber *nextNumber __attribute__((objc_precise_lifetime)) = [enumerator nextObject];
-				sum += nextNumber.unsignedIntegerValue;
-			}
-			reschedule();
-		}];
 		
+		@autoreleasepool {
+			enumerator = [enumerator.rac_sequence map:^id(id value) {
+				return value;
+			}].objectEnumerator;
+		}
+		
+		NSUInteger sum = 0;
+		for (NSNumber *x in enumerator) {
+			sum += x.unsignedIntegerValue;
+		}
+
 	}
 	
 	sleep(UINT32_MAX);
