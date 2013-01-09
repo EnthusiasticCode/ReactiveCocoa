@@ -42,27 +42,31 @@ static RACDisposable *subscribeForever (RACSignal *signal, void (^next)(id), voi
 	error = [error copy];
 	completed = [completed copy];
 
-	RACCompoundDisposable *disposable = [RACCompoundDisposable compoundDisposable];
+	RACCompoundDisposable *compoundDisposable = [RACCompoundDisposable compoundDisposable];
 
 	RACSchedulerRecursiveBlock recursiveBlock = ^(void (^recurse)(void)) {
-		__block __weak RACDisposable *selfDisposable = nil;
+		RACCompoundDisposable *selfDisposable = [RACCompoundDisposable compoundDisposable];
+		[compoundDisposable addDisposable:selfDisposable];
+
+		__weak RACDisposable *weakSelfDisposable = selfDisposable;
 
 		RACDisposable *subscriptionDisposable = [signal subscribeNext:next error:^(NSError *e) {
-			error(e, disposable);
-			[disposable removeDisposable:selfDisposable];
+			@autoreleasepool {
+				error(e, compoundDisposable);
+				[compoundDisposable removeDisposable:weakSelfDisposable];
+			}
 
 			recurse();
 		} completed:^{
-			completed(disposable);
-			[disposable removeDisposable:selfDisposable];
+			@autoreleasepool {
+				completed(compoundDisposable);
+				[compoundDisposable removeDisposable:weakSelfDisposable];
+			}
 
 			recurse();
 		}];
 
-		if (subscriptionDisposable != nil) {
-			[disposable addDisposable:subscriptionDisposable];
-			selfDisposable = subscriptionDisposable;
-		}
+		if (subscriptionDisposable != nil) [selfDisposable addDisposable:subscriptionDisposable];
 	};
 	
 	// Subscribe once immediately, and then use recursive scheduling for any
@@ -71,10 +75,10 @@ static RACDisposable *subscribeForever (RACSignal *signal, void (^next)(id), voi
 		RACScheduler *recursiveScheduler = RACScheduler.currentScheduler ?: [RACScheduler scheduler];
 
 		RACDisposable *schedulingDisposable = [recursiveScheduler scheduleRecursiveBlock:recursiveBlock];
-		if (schedulingDisposable != nil) [disposable addDisposable:schedulingDisposable];
+		if (schedulingDisposable != nil) [compoundDisposable addDisposable:schedulingDisposable];
 	});
 
-	return disposable;
+	return compoundDisposable;
 }
 
 // Used from within -concat to pop the next signal to concatenate to.
@@ -767,11 +771,11 @@ static RACDisposable *concatPopNextSignal(NSMutableArray *signals, BOOL *outerDo
 	}] setNameWithFormat:@"[%@] -takeUntil: %@", self.name, signalTrigger];
 }
 
-- (RACSignal *)switch {
+- (RACSignal *)switchToLatest {
 	return [[RACSignal createSignal:^(id<RACSubscriber> subscriber) {
 		__block RACDisposable *innerDisposable = nil;
 		RACDisposable *selfDisposable = [self subscribeNext:^(id x) {
-			NSAssert([x isKindOfClass:RACSignal.class] || x == nil, @"-switch requires that the source signal (%@) send signals. Instead we got: %@", self, x);
+			NSAssert([x isKindOfClass:RACSignal.class] || x == nil, @"-switchToLatest requires that the source signal (%@) send signals. Instead we got: %@", self, x);
 			
 			[innerDisposable dispose], innerDisposable = nil;
 			
@@ -790,7 +794,7 @@ static RACDisposable *concatPopNextSignal(NSMutableArray *signals, BOOL *outerDo
 			[innerDisposable dispose];
 			[selfDisposable dispose];
 		}];
-	}] setNameWithFormat:@"[%@] -switch", self.name];
+	}] setNameWithFormat:@"[%@] -switchToLatest", self.name];
 }
 
 + (RACSignal *)if:(RACSignal *)boolSignal then:(RACSignal *)trueSignal else:(RACSignal *)falseSignal {
@@ -804,7 +808,7 @@ static RACDisposable *concatPopNextSignal(NSMutableArray *signals, BOOL *outerDo
 			
 			return (value.boolValue ? trueSignal : falseSignal);
 		}]
-		switch]
+		switchToLatest]
 		setNameWithFormat:@"+if: %@ then: %@ else: %@", boolSignal, trueSignal, falseSignal];
 }
 
