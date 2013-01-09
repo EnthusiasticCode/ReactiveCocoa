@@ -41,7 +41,7 @@ int main(int argc, const char * argv[]) {
 		__block NSUInteger sum = 0;
 		[[RACScheduler scheduler] scheduleRecursiveBlock:^(void (^reschedule)(void)) {
 			@autoreleasepool {
-				NSNumber *nextNumber = [enumerator nextObject];
+				NSNumber *nextNumber __attribute__((objc_precise_lifetime)) = [enumerator nextObject];
 				sum += nextNumber.unsignedIntegerValue;
 			}
 			reschedule();
