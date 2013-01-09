@@ -9,6 +9,16 @@
 #import <Foundation/Foundation.h>
 #import <ReactiveCocoa/ReactiveCocoa.h>
 
+@interface Number: NSObject
+
+@property (nonatomic) NSUInteger value;
+
+@end
+
+@implementation Number
+
+@end
+
 @interface CountUpToXEnumerator : NSEnumerator
 
 + (instancetype)countUpTo:(NSUInteger)x;
@@ -28,7 +38,9 @@
 
 - (id)nextObject {
 	if (_current == _x) return nil;
-	return @(_current++);
+	Number *x = [[Number alloc] init];
+	x.value = _current++;
+	return x;
 }
 
 @end
@@ -48,15 +60,15 @@ int main(int argc, const char * argv[]) {
 		}
 		
 		NSUInteger sum = 0;
-//		for (NSNumber *x in enumerator) {
-//			sum += x.unsignedIntegerValue;
+//		for (Number *x in enumerator) {
+//			sum += x.value;
 //		}
 		
 		for (;;) {
 			@autoreleasepool {
-				NSNumber *x __attribute__((objc_precise_lifetime)) = [enumerator nextObject];
+				Number *x = [enumerator nextObject];
 				if (x == nil) break;
-				sum += x.unsignedIntegerValue;
+				sum += x.value;
 			}
 		}
 
